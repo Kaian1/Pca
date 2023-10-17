@@ -101,7 +101,7 @@ def run_game():
     clock = pygame.time.Clock()
     car_x = 100
     car_y = 300
-    carro = pygame.image.load("D:\Projeto PCA\Carro\Carro vermelho.png")
+    carro = pygame.image.load("C:\Projeto PCA\Carro vermelho.png")
     tamanho, largura = 5, 1.5
     car_rect = carro.get_rect()
     car_rect.topleft = (car_x, car_y)
