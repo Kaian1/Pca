@@ -1,4 +1,6 @@
 import pygame
+import requests
+from io import BytesIO
 import random
 import sys
 
@@ -7,17 +9,27 @@ pygame.init()
 # Configurações da tela
 WIDTH, HEIGHT = 800, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Jogo de Perguntas Matemáticas")
+pygame.display.set_caption("Corrida Matemática")
 
 # Cores
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+
+# Defina as variáveis globais
+correct_answers_limit = 5
 
 # Operações matemáticas disponíveis
 OPERATIONS = ["1-Adição (+)", "2-Subtração (-)", "3-Multiplicação (*)", "4-Divisão (÷)"]
 
 # Variável para armazenar a operação selecionada
 selected_operation = None
+
+# Defina os estados do jogo
+MENU = 0
+GAME = 1
+
+# Inicialize o estado do jogo como MENU
+game_state = MENU
 
 # Função para gerar uma pergunta matemática com base na operação selecionada
 def generate_math_question(operation, valor_min=1, valor_max=9):
@@ -34,10 +46,10 @@ def generate_math_question(operation, valor_min=1, valor_max=9):
         pergunta = f"Quanto é {num1} x {num2}?"
         resposta = num1 * num2
     elif operation == "4-Divisão (÷)":
-        num2 = random.randint(1, num1)  # Evita divisões por zero e divisões que não resultem em números inteiros
+        num2 = random.randint(1, num1)
         pergunta = f"Quanto é {num1} ÷ {num2}?"
         resposta = num1 // num2
-    
+
     return pergunta, resposta
 
 # Classe para representar o jogador
@@ -55,22 +67,42 @@ class MathGame:
     def __init__(self):
         self.player = Player()
         self.font = pygame.font.Font(None, 36)
-        self.pergunta, self.resposta_correta = "", None
+        self.pergunta, self.resposta_correta = ("", None)
+        self.correct_answers = 0
+        self.car_x_initial = 100 # Adiciona uma linha para armazenar a posição do carro
+        self.car_x = self.car_x_initial  # Adicione car_x como atributo
+        self.car_y = 300
 
     def start_new_game(self, operation):
         self.pergunta, self.resposta_correta = generate_math_question(operation)
         self.player.resposta_do_jogador = ""
 
-    def check_answer(self):
-        try:
-            resposta = int(self.player.resposta_do_jogador)
-            if resposta == self.resposta_correta:
-                return True
-            else:
-                return False
-        except ValueError:
-            return False
+    def reset(self):
+     self.player.reset()
+     self.correct_answers = 0
+     self.car_x = self.car_x_initial #Redefina a posição do carro para a posição inicial
 
+    def check_answer(self):
+       global correct_answers_limit
+       
+       try:
+         resposta = int(self.player.resposta_do_jogador)
+         if resposta == self.resposta_correta:
+                self.start_new_game(selected_operation)  # Mude a pergunta quando acertar
+                self.correct_answers += 1
+                if self.correct_answers >= correct_answers_limit:
+                     print("Você alcançou o limite de respostas corretas. Voltando ao menu.")
+                self.reset()  # Redefina o jogo após atingir o limite de respostas corretas
+                game_state = MENU  # Volte ao menu
+                return True
+         if self.car_x < 740:
+            self.car_x += 40
+         else:
+            car_x = 100
+            return False
+       except ValueError:
+            return False
+        
 # Função para exibir o menu na tela
 def show_menu():
     font = pygame.font.Font(None, 48)
@@ -82,72 +114,82 @@ def show_menu():
         text = font.render(operation, True, BLACK)
         screen.blit(text, (200, y))
         y += 50
-# Função para verificar o fim de jogo
-def check_game_over(game):
-    if game.player.vidas <= 0:
-        print("Você perdeu todas as vidas. Voltando ao menu.")
-        return True
-    return False
 
 # Função para executar o jogo
 def run_game():
+    global game_state
+    game_state = MENU
+
     game = MathGame()
+
     clock = pygame.time.Clock()
-    menu_shown = True
-    car_x = 100  # Posição X inicial do carro
-    car_y = 300  # Posição Y inicial do carro
-    carro = pygame.image.load("d:\Projeto PCA\Carro vermelho.png")
-    tamanho, largura = 5, 1.5
-    car_rect = carro.get_rect()
-    car_rect.topleft = (car_x, car_y)
+    car_x = 100
+    car_y = 300
+
+    # Baixar a imagem da URL
+    url = "https://github.com/Kaian1/Pca/raw/master/Carro%20vermelho.png"
+    response = requests.get(url)
+
+    # Verificar se o download foi bem-sucedido
+    if response.status_code == 200:
+        # Carregar a imagem a partir dos dados baixados
+        carro = pygame.image.load(BytesIO(response.content))
+        tamanho, largura = 5, 1.5
+        car_rect = carro.get_rect()
+        car_rect.topleft = (car_x, car_y)
+    else:
+        print("Erro ao baixar a imagem")
 
     global selected_operation
-    correct_answers = 0  # Número de respostas corretas
-    correct_answers_limit = 5  # Limite de respostas corretas antes de voltar ao menu
+    correct_answers = 0
+    correct_answers_limit = 5
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif menu_shown:
+            if game_state == MENU:
                 if event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_4:
                     selected_operation = OPERATIONS[event.key - pygame.K_1]
+                    game_state = GAME
                     game.start_new_game(selected_operation)
-                    menu_shown = False
-            else:
+            elif game_state == GAME:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         if game.check_answer():
                             print("Certa a resposta!")
-                            correct_answers += 1  # Incrementa o número de respostas corretas
+                            correct_answers += 1
                             if correct_answers >= correct_answers_limit:
                                 print("Você alcançou o limite de respostas corretas. Voltando ao menu.")
-                                menu_shown = True
-                            if car_x < 740:  # Limite o movimento a 1 casa
-                                car_x += 40  # Altere a velocidade do carro conforme necessário
+                                game_state = MENU
+                                game.reset()
+                                car_x = game.car_x_initial
+                                correct_answers = 0
+                            if car_x < 740:
+                                car_x += 40
                             else:
-                                car_x = 100  # Volte à posição inicial após 4 casas
-                            car_rect.topleft = (car_x, car_y)  # Atualize a posição do carro
+                                car_x = 100
+                            car_rect.topleft = (car_x, car_y)
                         else:
-                            print(f"EROU!!! A resposta correta é: {game.resposta_correta}.")
+                            print(f"ERROU!!! A resposta correta é: {game.resposta_correta}.")
                             game.player.vidas -= 1
                             if game.player.vidas == 0:
-                                print("Você perdeu todas as vidas. Fim de jogo.")
-                                running = False
-                        game.start_new_game(selected_operation)
+                                print("Você perdeu todas as vidas. Voltando ao menu.")
+                                game_state = MENU
+                                game.reset()
+                                car_x = game.car_x_initial
                     elif event.key == pygame.K_BACKSPACE:
                         game.player.resposta_do_jogador = game.player.resposta_do_jogador[:-1]
-                    elif event.key in [pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
-                                       pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9]:
+                    else:
                         game.player.resposta_do_jogador += event.unicode
 
         # Limpa a tela
         screen.fill(WHITE)
 
-        if menu_shown:
+        if game_state == MENU:
             show_menu()
-        else:
+        elif game_state == GAME:
             # Exibe as vidas na tela
             text = game.font.render(f"Vidas: {game.player.vidas}", True, BLACK)
             screen.blit(text, (10, 10))
@@ -166,7 +208,7 @@ def run_game():
         # Atualiza a tela
         pygame.display.flip()
 
-        clock.tick(60)  # Limita a taxa de quadros a 60 FPS
+        clock.tick(60)
 
     pygame.quit()
     sys.exit()
