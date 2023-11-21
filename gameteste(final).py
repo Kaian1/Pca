@@ -55,74 +55,54 @@ def generate_math_question(operation, valor_min=1, valor_max=9):
 # Classe para representar o jogador
 class Player:
     def __init__(self):
-        self.vidas = 3
+        self.vidas = 2
         self.resposta_do_jogador = ""
 
     def reset(self):
-        self.vidas = 3
+        self.vidas = 2
         self.resposta_do_jogador = ""
-
-# Classe para representar o bot
-class Bot:
-    def __init__(self):
-        self.vidas = 3
-
-    def reset(self):
-        self.vidas = 3
-
-    def get_answer(self):
-        # Lógica para gerar uma resposta do bot
-        return random.randint(1, 9)
 
 # Classe para representar o jogo de perguntas matemáticas
 class MathGame:
     def __init__(self):
         self.player = Player()
-        self.bot = Bot()
         self.font = pygame.font.Font(None, 36)
         self.pergunta, self.resposta_correta = ("", None)
         self.correct_answers = 0
-        self.correct_answers_bot = 0
-        self.car_x_initial = 100
-        self.car_x_player = self.car_x_initial
-        self.car_x_bot = self.car_x_initial
+        self.car_x_initial = 100 # Adiciona uma linha para armazenar a posição do carro
+        self.car_x = self.car_x_initial  # Adicione car_x como atributo
         self.car_y = 300
-        self.last_bot_move_time = pygame.time.get_ticks()
 
     def start_new_game(self, operation):
         self.pergunta, self.resposta_correta = generate_math_question(operation)
         self.player.resposta_do_jogador = ""
-        self.bot.reset()
 
     def reset(self):
-        self.player.reset()
-        self.bot.reset()
-        self.correct_answers = 0
-        self.correct_answers_bot = 0
-        self.car_x_player = self.car_x_initial
-        self.car_x_bot = self.car_x_initial
-        self.last_bot_move_time = pygame.time.get_ticks()
+     self.player.reset()
+     self.correct_answers = 0
+     self.car_x = self.car_x_initial #Redefina a posição do carro para a posição inicial
 
-    def check_answer(self, is_player=True):
-        try:
-            resposta = int(self.player.resposta_do_jogador) if is_player else self.bot.get_answer()
-            if resposta == self.resposta_correta:
-                if is_player:
-                    self.correct_answers += 1
-                    if self.correct_answers >= correct_answers_limit:
-                        print("Você alcançou o limite de respostas corretas. Voltando ao menu.")
-                        self.reset()
-                        return True
-                else:
-                    if self.car_x_bot >= 200:
-                        print("O bot atingiu 5 casas. Você perdeu! Voltando ao menu.")
-                        self.reset()
-                        return True
-                    self.correct_answers_bot += 1
+    def check_answer(self):
+       global correct_answers_limit
+       
+       try:
+         resposta = int(self.player.resposta_do_jogador)
+         if resposta == self.resposta_correta:
+                self.start_new_game(selected_operation)  # Mude a pergunta quando acertar
+                self.correct_answers += 1
+                if self.correct_answers >= correct_answers_limit:
+                     print("Você alcançou o limite de respostas corretas. Voltando ao menu.")
+                self.reset()  # Redefina o jogo após atingir o limite de respostas corretas
+                game_state = MENU  # Volte ao menu
+                return True
+         if self.car_x < 740:
+            self.car_x += 40
+         else:
+            car_x = 100
             return False
-        except ValueError:
+       except ValueError:
             return False
-
+        
 # Função para exibir o menu na tela
 def show_menu():
     font = pygame.font.Font(None, 48)
@@ -146,31 +126,19 @@ def run_game():
     car_x = 100
     car_y = 300
 
-    # Baixar a imagem da URL para o carro do jogador
-    url_player = "https://github.com/Kaian1/Pca/raw/master/Carro%20vermelho.png"
-    response_player = requests.get(url_player)
+    # Baixar a imagem da URL
+    url = "https://github.com/Kaian1/Pca/raw/master/Carro%20vermelho.png"
+    response = requests.get(url)
 
     # Verificar se o download foi bem-sucedido
-    if response_player.status_code == 200:
-        # Carregar a imagem do carro do jogador a partir dos dados baixados
-        carro_player = pygame.image.load(BytesIO(response_player.content))
-        car_rect_player = carro_player.get_rect()
-        car_rect_player.topleft = (car_x, car_y)
+    if response.status_code == 200:
+        # Carregar a imagem a partir dos dados baixados
+        carro = pygame.image.load(BytesIO(response.content))
+        tamanho, largura = 5, 1.5
+        car_rect = carro.get_rect()
+        car_rect.topleft = (car_x, car_y)
     else:
-        print("Erro ao baixar a imagem do carro do jogador")
-
-    # Baixar a imagem da URL para o carro do bot
-    url_bot = "https://github.com/Kaian1/Pca/blob/master/Carro%20ciano.png?raw=true"
-    response_bot = requests.get(url_bot)
-
-    # Verificar se o download foi bem-sucedido
-    if response_bot.status_code == 200:
-        # Carregar a imagem do carro do bot a partir dos dados baixados
-        carro_bot = pygame.image.load(BytesIO(response_bot.content))
-        car_rect_bot = carro_bot.get_rect()
-        car_rect_bot.topleft = (car_x, car_y)
-    else:
-        print("Erro ao baixar a imagem do carro do bot")
+        print("Erro ao baixar a imagem")
 
     global selected_operation
     correct_answers = 0
@@ -198,16 +166,16 @@ def run_game():
                                 game.reset()
                                 car_x = game.car_x_initial
                                 correct_answers = 0
-                            if game.car_x_player < 740:
-                                game.car_x_player += 40
+                            if car_x < 740:
+                                car_x += 40
                             else:
-                                game.car_x_player = 100
-                            car_rect_player.topleft = (game.car_x_player, car_y)
+                                car_x = 100
+                            car_rect.topleft = (car_x, car_y)
                         else:
                             print(f"ERROU!!! A resposta correta é: {game.resposta_correta}.")
                             game.player.vidas -= 1
                             if game.player.vidas == 0:
-                                print("Você perdeu todas as vidas. Voltando ao menu.")
+                                print("Você perdeu todas as tentativas. Voltando ao menu.")
                                 game_state = MENU
                                 game.reset()
                                 car_x = game.car_x_initial
@@ -222,8 +190,8 @@ def run_game():
         if game_state == MENU:
             show_menu()
         elif game_state == GAME:
-            # Exibe as vidas do jogador na tela
-            text = game.font.render(f"Vidas do jogador: {game.player.vidas}", True, BLACK)
+            # Exibe as vidas na tela
+            text = game.font.render(f"Tentativas: {game.player.vidas}", True, BLACK)
             screen.blit(text, (10, 10))
 
             # Exibe a pergunta na tela
@@ -234,21 +202,8 @@ def run_game():
             text = game.font.render(f"Sua resposta: {game.player.resposta_do_jogador}", True, BLACK)
             screen.blit(text, (100, 150))
 
-            # Desenha o carro do jogador na tela
-            screen.blit(carro_player, car_rect_player)
-
-            # Movimenta o carro do bot a cada 7 segundos
-            current_time = pygame.time.get_ticks()
-            if current_time - game.last_bot_move_time >= 7000:
-                game.last_bot_move_time = current_time
-                if game.car_x_bot < 740:
-                    game.car_x_bot += 40
-                else:
-                    game.car_x_bot = 100
-                car_rect_bot.topleft = (game.car_x_bot, car_y)
-
-            # Desenha o carro do bot na tela
-            screen.blit(carro_bot, car_rect_bot)
+            # Desenhe o carro na tela
+            screen.blit(carro, car_rect)
 
         # Atualiza a tela
         pygame.display.flip()
