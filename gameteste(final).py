@@ -126,6 +126,9 @@ def run_game():
     car_x = 100
     car_y = 300
 
+    # Configuração da tela cheia
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+
     # Baixar a imagem da URL
     url = "https://github.com/Kaian1/Pca/raw/master/Carro%20vermelho.png"
     response = requests.get(url)
@@ -149,6 +152,10 @@ def run_game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.display.set_mode((WIDTH, HEIGHT))  # Volta à janela normal
+
             if game_state == MENU:
                 if event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_4:
                     selected_operation = OPERATIONS[event.key - pygame.K_1]
