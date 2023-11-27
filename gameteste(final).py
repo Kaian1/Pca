@@ -167,6 +167,7 @@ def run_game():
                         if game.check_answer():
                             print("Certa a resposta!")
                             correct_answers += 1
+                            #Limite de resposta corretas
                             if correct_answers >= correct_answers_limit:
                                 print("Você alcançou o limite de respostas corretas. Voltando ao menu.")
                                 game_state = MENU
@@ -180,12 +181,19 @@ def run_game():
                             car_rect.topleft = (car_x, car_y)
                         else:
                             print(f"ERROU!!! A resposta correta é: {game.resposta_correta}.")
-                            game.player.vidas -= 1
+                            game.player.vidas -= 1 
+                            #Quando perde todas as vidas
                             if game.player.vidas == 0:
                                 print("Você perdeu todas as tentativas. Voltando ao menu.")
                                 game_state = MENU
                                 game.reset()
                                 car_x = game.car_x_initial
+                                correct_answers = 0
+                                if car_x < 740:
+                                 car_x += 40
+                                else:
+                                 car_x = 100
+                            car_rect.topleft = (car_x, car_y)
                     elif event.key == pygame.K_BACKSPACE:
                         game.player.resposta_do_jogador = game.player.resposta_do_jogador[:-1]
                     else:
